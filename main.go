@@ -73,6 +73,21 @@ func GetPerson(response http.ResponseWriter, request *http.Request) {
 
 }
 
+func DeletePerson(response http.ResponseWriter, request *http.Request) {
+	response.Header().Add("content-type", "application/json")
+	params := mux.Vars(request)
+	id, _ := primitive.ObjectIDFromHex(params["id"])
+	collection := client.Database("PersonDatabase").Collection("people")
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	result, err := collection.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		response.Write([]byte(`{"message": "` + err.Error() + `"}`))
+		return
+	}
+	json.NewEncoder(response).Encode(result)
+}
+
 func main() {
 	fmt.Println("Starting the application...")
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -80,6 +95,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/person", CreatePerson).Methods("POST")
 	router.HandleFunc("/person/{id}", GetPerson).Methods("GET")
+	router.HandleFunc("/person/{id}", DeletePerson).Methods("DELETE")
 	router.HandleFunc("/people", GetPeople).Methods("GET")
 	http.ListenAndServe("localhost:8080", router)
 
